@@ -20,6 +20,8 @@ var path = require('path');
 // list of currently connected clients (users)
 var clients = [ ];
 
+var items = [];
+
 const homedir = require('os').homedir();
 var config = JSON.parse(fs.readFileSync(path.join(homedir, '/.config/muZic/config.json'), 'utf8'));
 
@@ -76,6 +78,7 @@ wsServer.on('request', function(request) {
    for (var pl in config.Playlists)
       pls_json.push({ name: pl, type: config.Playlists[pl].type });
    connection.sendUTF(JSON.stringify({ type:'List-Playlists', data: pls_json }));
+   connection.sendUTF(JSON.stringify({ type:'List-Items', data: items }));
 
    console.log((new Date()) + ' Connection accepted.');
 
@@ -91,7 +94,6 @@ wsServer.on('request', function(request) {
             console.log(url);
             https.get(url, function(resp)
                {
-                  var items = [];
                   var rl = readline.createInterface({
                      input: resp,
                      output: process.stdout,
