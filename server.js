@@ -14,7 +14,7 @@ var path = require('path');
 var os = require('os');
 var child_process = require('child_process');
 
-// list of currently connected clients (users)
+// Array of currently connected clients
 var clients = [ ];
 // JSON list of the current playlist items
 var cur_pl_items = {};
