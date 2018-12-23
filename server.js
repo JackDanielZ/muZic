@@ -16,7 +16,7 @@ var os = require('os');
 // list of currently connected clients (users)
 var clients = [ ];
 // list of the current playlist items
-var items = [];
+var cur_pl_items = [];
 // Config data
 var config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '/.config/muZic/config.json'), 'utf8'));
 
@@ -75,7 +75,7 @@ wsServer.on('request', function(request) {
    for (var pl in config.Playlists)
       pls_json.push({ name: pl, type: config.Playlists[pl].type });
    connection.sendUTF(JSON.stringify({ type:'List-Playlists', data: pls_json }));
-   connection.sendUTF(JSON.stringify({ type:'List-Items', data: items }));
+   connection.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
 
    console.log((new Date()) + ' Connection accepted.');
 
@@ -103,14 +103,14 @@ wsServer.on('request', function(request) {
                         var id = line.match(/data-video-id="([^\"]+)"/);
                         var title = line.match(/data-video-title="([^\"]+)"/);
                         var icon = line.match(/data-thumbnail-url="([^\"]+)"/);
-                        items.push({id: id[1], title: title[1], icon: icon[1]});
+                        cur_pl_items.push({id: id[1], title: title[1], icon: icon[1]});
                      }
                   })
                   rl.on('close', function()
                   {
                      clients.forEach(function(c)
                         {
-                           c.sendUTF(JSON.stringify({ type:'List-Items', data: items }));
+                           c.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
                         })
                   })
 
