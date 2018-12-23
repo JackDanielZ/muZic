@@ -83,8 +83,8 @@
                  else if (json.type === 'List-Items') {
                     /* List items */
                     var html = "";
-                    for (var item of json.data)
-                       html = html + '<option value="' + item.id + '">' + item.title + '</option>';
+                    for (var item in json.data)
+                       html = html + '<option value="' + item + '">' + json.data[item].title + '</option>';
                     items_content.html('<select id="Items" size=50">'+html+'</select>');
                     document.getElementById("Items").onchange = function()
                     {

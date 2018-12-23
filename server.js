@@ -16,8 +16,8 @@ var child_process = require('child_process');
 
 // list of currently connected clients (users)
 var clients = [ ];
-// list of the current playlist items
-var cur_pl_items = [];
+// JSON list of the current playlist items
+var cur_pl_items = {};
 // JSON list of the youtube items infos
 var yt_items = {};
 // Config data
@@ -106,7 +106,7 @@ wsServer.on('request', function(request) {
                         var id = line.match(/data-video-id="([^\"]+)"/);
                         var title = line.match(/data-video-title="([^\"]+)"/);
                         var icon = line.match(/data-thumbnail-url="([^\"]+)"/);
-                        cur_pl_items.push({id: id[1], title: title[1], icon: icon[1]});
+                        cur_pl_items[id[1]] = {title: title[1], icon: icon[1]};
                      }
                   })
                   rl.on('close', function()
@@ -124,32 +124,32 @@ wsServer.on('request', function(request) {
          else if (json.type == 'Select-Item')
          {
             console.log('Select item: ' + json.data);
-            for (let item of cur_pl_items)
+            for (let item in cur_pl_items)
             {
-               if (item.id == json.data)
+               if (item == json.data)
                {
                   var found = false;
                   for (let yt_item in yt_items)
                   {
-                     if (yt_item == item.id) found = true;
+                     if (yt_item == item) found = true;
                   }
                   if (!found)
                   {
-                     var path = '/tmp/yt-'+item.id+'.opus';
+                     var path = '/tmp/yt-'+item+'.opus';
                      const child = child_process.spawn('youtube-dl',
-                        ['--audio-format','opus', '--no-part', '-x', 'http://youtube.com/watch?v='+item.id,
+                        ['--audio-format','opus', '--no-part', '-x', 'http://youtube.com/watch?v='+item,
                            '-o', path]);
-                     yt_items[item.id] = ({path: path, downloading: true, is_playable: false});
+                     yt_items[item] = ({path: path, downloading: true, is_playable: false});
                      child.stdout.on('data', function(data)
                         {
                            console.log("ZZZ11"+data+"ZZZ12");
-                           if (!yt_items[item.id].is_playable)
+                           if (!yt_items[item].is_playable)
                            {
                               var progress = data.toString().match(/download. ([^%]+)% of/);
                               if (progress)
                               {
                                  if (progress[1] > 10.0)
-                                    yt_items[item.id].is_playable = true;
+                                    yt_items[item].is_playable = true;
                               }
                            }
                         })
@@ -159,8 +159,8 @@ wsServer.on('request', function(request) {
                         })
                      child.on('close', function()
                         {
-                           yt_items[item.id].downloading = false;
-                           console.log(yt_items[item.id]);
+                           yt_items[item].downloading = false;
+                           console.log(yt_items[item]);
                         })
                   }
                   break;
