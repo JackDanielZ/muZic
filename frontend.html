@@ -88,25 +88,8 @@
                     items_content.html('<select id="Items" size=50">'+html+'</select>');
                     document.getElementById("Items").onchange = function()
                     {
-                       console.log(JSON.stringify({ type:'Select-Item', data: this.value }));
                        connection.send(JSON.stringify({ type:'Select-Item', data: this.value }));
                     }
-                 }
-                 else if (json.type === 'select-playlist') { // first response from the server with user's color
-                    console.log('Select playlist: ', json);
-                 }
-                 else if (json.type === 'color') { // first response from the server with user's color
-                    myColor = json.data;
-                    // from now user can start sending messages
-                 } else if (json.type === 'history') { // entire message history
-                    // insert every single message to the chat window
-                    for (var i=0; i < json.data.length; i++) {
-                       addMessage(json.data[i].author, json.data[i].text,
-                          json.data[i].color, new Date(json.data[i].time));
-                    }
-                 } else if (json.type === 'message') { // it's a single message
-                    addMessage(json.data.author, json.data.text,
-                       json.data.color, new Date(json.data.time));
                  } else {
                     console.log('Hmm..., I\'ve never seen JSON like this: ', json);
                  }
