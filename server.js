@@ -1,8 +1,6 @@
 // http://ejohn.org/blog/ecmascript-5-strict-mode-json-and-more/
 "use strict";
 
-// Optional. You will see this name in eg. 'ps' or 'top' command
-process.title = 'muZic';
 
 // Port where we'll run the websocket server
 var webSocketsServerPort = 1337;
@@ -13,17 +11,16 @@ var https = require('https');
 var readline = require('readline');
 var fs = require('fs');
 var path = require('path');
+var os = require('os');
 
-/**
- * Global variables
- */
 // list of currently connected clients (users)
 var clients = [ ];
-
+// list of the current playlist items
 var items = [];
+// Config data
+var config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '/.config/muZic/config.json'), 'utf8'));
 
-const homedir = require('os').homedir();
-var config = JSON.parse(fs.readFileSync(path.join(homedir, '/.config/muZic/config.json'), 'utf8'));
+process.title = 'muZic';
 
 for (var pl in config.Playlists)
 {
