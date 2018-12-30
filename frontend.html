@@ -53,7 +53,8 @@
               }
 
               // open connection
-              var connection = new WebSocket('ws://127.0.0.1:1337');
+              console.log(location);
+              var connection = new WebSocket('ws://'+location.hostname+':1337');
 
               // most important part - incoming messages
               connection.onmessage = function (message) {
