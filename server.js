@@ -20,10 +20,39 @@ var clients = [ ];
 var cur_pl_items = {};
 // JSON list of the youtube items infos
 var yt_items = {};
+// Current item
+var cur_item = "";
+var cur_pos = 0;
+
 // Config data
 var config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '/.config/muZic/config.json'), 'utf8'));
 
 process.title = 'muZic';
+
+var zplay = child_process.spawn("stdbuf", ["-oL", "-eL", 'zplay']);
+
+zplay.stdin.write("SHOW_PROGRESS\n");
+
+zplay.stdout.on('data', function(data) {
+   var str = data.toString(), lines = str.split(/(\r?\n)/g);
+   for (var i=0; i<lines.length; i++)
+   {
+      if (/POSITION:/g.test(lines[i]))
+      {
+         var m = lines[i].match(/POSITION: ([0-9]+) \/ ([0-9]+)/);
+         var pos = m[1];
+         var len = m[2];
+         if (cur_pos != pos)
+         {
+            cur_pos = pos;
+            clients.forEach(function(c)
+               {
+                  c.sendUTF(JSON.stringify({ type:'Player-Progress', pos: pos, len: len }));
+               })
+         }
+      }
+   }
+});
 
 for (var pl in config.Playlists)
 {
@@ -53,7 +82,7 @@ var server = http.createServer(function(request, response) {
    });
 });
 
-server.listen(webSocketsServerPort, function() {
+server.listen(webSocketsServerPort, '0.0.0.0', function() {
    console.log((new Date()) + " Server is listening on port " + webSocketsServerPort);
 });
 
@@ -65,6 +94,53 @@ var wsServer = new webSocketServer({
    // an enhanced HTTP request. For more info http://tools.ietf.org/html/rfc6455#page-6
    httpServer: server
 });
+
+function song_download(item)
+{
+   var found = false;
+   for (let yt_item in yt_items)
+   {
+      if (yt_item == item) found = true;
+   }
+   if (!found)
+   {
+      var path = '/tmp/yt-'+item+'.opus';
+      const child = child_process.spawn('youtube-dl',
+         ['--audio-format','opus', '--no-part', '-x', 'http://youtube.com/watch?v='+item,
+            '-o', path]);
+      yt_items[item] = ({path: path, downloading: true, is_playable: false});
+      child.stdout.on('data', function(data)
+         {
+            console.log("ZZZ11"+data+"ZZZ12");
+            if (!yt_items[item].is_playable)
+            {
+               var progress = data.toString().match(/download. ([^%]+)% of/);
+               if (progress)
+               {
+                  if (progress[1] > 10.0)
+                  {
+                     yt_items[item].is_playable = true;
+                     if (item == cur_item)
+                     {
+                        zplay.stdin.write("FILE "+path+'\n');
+                        zplay.stdin.write("PLAY\n");
+                     }
+                  }
+
+               }
+            }
+         })
+      child.stderr.on('data', function(data)
+         {
+            console.log("ZZZ21"+data+"ZZZ22");
+         })
+      child.on('close', function()
+         {
+            yt_items[item].downloading = false;
+            console.log(yt_items[item]);
+         })
+   }
+}
 
 // This callback function is called every time someone
 // tries to connect to the WebSocket server
@@ -100,6 +176,7 @@ wsServer.on('request', function(request) {
                      terminal: false
                   });
 
+                  cur_pl_items = {};
                   rl.on('line', function(line){
                      if (/data-video-id=/g.test(line))
                      {
@@ -128,41 +205,8 @@ wsServer.on('request', function(request) {
             {
                if (item == json.data)
                {
-                  var found = false;
-                  for (let yt_item in yt_items)
-                  {
-                     if (yt_item == item) found = true;
-                  }
-                  if (!found)
-                  {
-                     var path = '/tmp/yt-'+item+'.opus';
-                     const child = child_process.spawn('youtube-dl',
-                        ['--audio-format','opus', '--no-part', '-x', 'http://youtube.com/watch?v='+item,
-                           '-o', path]);
-                     yt_items[item] = ({path: path, downloading: true, is_playable: false});
-                     child.stdout.on('data', function(data)
-                        {
-                           console.log("ZZZ11"+data+"ZZZ12");
-                           if (!yt_items[item].is_playable)
-                           {
-                              var progress = data.toString().match(/download. ([^%]+)% of/);
-                              if (progress)
-                              {
-                                 if (progress[1] > 10.0)
-                                    yt_items[item].is_playable = true;
-                              }
-                           }
-                        })
-                     child.stderr.on('data', function(data)
-                        {
-                           console.log("ZZZ21"+data+"ZZZ22");
-                        })
-                     child.on('close', function()
-                        {
-                           yt_items[item].downloading = false;
-                           console.log(yt_items[item]);
-                        })
-                  }
+                  cur_item = json.data;
+                  song_download(item);
                   break;
                }
             }
