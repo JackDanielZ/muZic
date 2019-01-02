@@ -5,52 +5,39 @@
         <title>WebSockets - Simple chat</title>
 
         <style>
-            .flex-container {
-               display: flex;
-               background-color: #CCC;
+            .selectors_box {
+               background: #eaeaed;
+               text-align: center;
             }
-
-            .flex-container > div {
-               background-color: #f1f1f1;
-               width: 300px;
+            .player_box {
+               background: #eaeaed;
+               text-align: center;
             }
         </style>
     </head>
     <body>
-       <div class="flex-container">
-          <div id="pls_content"></div>
-          <div id="items_content"></div>
-          <div id="player"></div>
+       <div>
+          <div class="selectors_box">
+             <select id="pls_content"></select>
+             <select id="items_content"></select>
+          </div>
+          <div class="player_box">
+             <img id="pl_icon"></img>
+             <p id="pl_pos"></p>
+          </div>
        </div>
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
         <script>
-           function Select_Playlist(select_object, connection)
-           {
-              console.log(select_object.value);
-              connection.send("toto");
-           }
            $(function () {
               "use strict";
 
-              // for better performance - to avoid searching in DOM
-              var pls_content = $('#pls_content');
-              var items_content = $('#items_content');
-
-              // my color assigned by the server
-              var myColor = false;
-              // my name sent to the server
-              var myName = false;
+              var cur_item = "";
+              var cur_item_pos = 0;
+              var cur_item_len = 0;
 
               // if user is running mozilla then use it's built-in WebSocket
               window.WebSocket = window.WebSocket || window.MozWebSocket;
-
-              // if browser doesn't support WebSocket, just show some notification and exit
-              if (!window.WebSocket) {
-                 pls_content.html($('<p>', { text: 'Sorry, but your browser doesn\'t support WebSockets.'} ));
-                 $('span').hide();
-                 return;
-              }
 
               // open connection
               console.log(location);
@@ -74,8 +61,8 @@
                     var html = "";
                     for (var item of json.data)
                        html = html + '<option value="' + item.name + '">' + item.name + '</option>';
-                    pls_content.html('<select id="Playlists" size=50">'+html+'</select>');
-                    document.getElementById("Playlists").onchange = function()
+                    document.getElementById("pls_content").innerHTML = html;
+                    document.getElementById("pls_content").onchange = function()
                     {
                        console.log(JSON.stringify({ type:'Select-Playlist', data: this.value }));
                        connection.send(JSON.stringify({ type:'Select-Playlist', data: this.value }));
@@ -85,13 +72,23 @@
                     /* List items */
                     var html = "";
                     for (var item in json.data)
-                       html = html + '<option value="' + item + '">' + json.data[item].title + '</option>';
-                    items_content.html('<select id="Items" size=50">'+html+'</select>');
-                    document.getElementById("Items").onchange = function()
+                       html = html + '<option data-icon="'+json.data[item.icon]+'" value="' + item + '">' + json.data[item].title + '</option>';
+                    if (html == "") html = "<option>None</option>";
+                    document.getElementById("items_content").innerHTML = html;
+                    document.getElementById("items_content").onchange = function()
                     {
                        connection.send(JSON.stringify({ type:'Select-Item', data: this.value }));
                     }
-                 } else {
+                 }
+                 else if (json.type === 'Player-Progress') {
+                    if (json.item != cur_item)
+                    {
+                       cur_item = json.item;
+                       document.getElementById("pl_icon").src = json.icon;
+                    }
+                    document.getElementById("pl_pos").innerHTML = json.pos + " / " + json.len;
+                 }
+                 else {
                     console.log('Hmm..., I\'ve never seen JSON like this: ', json);
                  }
               };

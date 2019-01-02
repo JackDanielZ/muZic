@@ -47,7 +47,7 @@ zplay.stdout.on('data', function(data) {
             cur_pos = pos;
             clients.forEach(function(c)
                {
-                  c.sendUTF(JSON.stringify({ type:'Player-Progress', pos: pos, len: len }));
+                  c.sendUTF(JSON.stringify({ type:'Player-Progress', item: cur_item, icon: cur_pl_items[cur_item].icon, pos: pos, len: len }));
                })
          }
       }
