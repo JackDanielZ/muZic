@@ -23,6 +23,7 @@ var yt_items = {};
 // Current item
 var cur_item = "";
 var cur_pos = 0;
+var cur_len = 0;
 
 // Config data
 var config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '/.config/muZic/config.json'), 'utf8'));
@@ -32,6 +33,14 @@ process.title = 'muZic';
 var zplay = child_process.spawn("stdbuf", ["-oL", "-eL", 'zplay']);
 
 zplay.stdin.write("SHOW_PROGRESS\n");
+
+function progress_send()
+{
+   clients.forEach(function(c)
+      {
+         c.sendUTF(JSON.stringify({ type:'Player-Progress', item: cur_item, icon: cur_pl_items[cur_item].icon, pos: cur_pos, len: cur_len }));
+      })
+}
 
 zplay.stdout.on('data', function(data) {
    var str = data.toString(), lines = str.split(/(\r?\n)/g);
@@ -45,10 +54,8 @@ zplay.stdout.on('data', function(data) {
          if (cur_pos != pos)
          {
             cur_pos = pos;
-            clients.forEach(function(c)
-               {
-                  c.sendUTF(JSON.stringify({ type:'Player-Progress', item: cur_item, icon: cur_pl_items[cur_item].icon, pos: pos, len: len }));
-               })
+            cur_len = len;
+            progress_send();
          }
       }
    }
@@ -210,6 +217,12 @@ wsServer.on('request', function(request) {
                   break;
                }
             }
+         }
+         else if (json.type == 'Change-Position')
+         {
+            cur_pos = json.pos;
+            zplay.stdin.write("POSITION " + cur_pos + "\n");
+            progress_send();
          }
       }
    });

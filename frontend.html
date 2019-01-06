@@ -23,7 +23,11 @@
           </div>
           <div class="player_box">
              <img id="pl_icon"></img>
-             <p id="pl_pos"></p>
+             <div>
+                <label id="pl_pos" for="pl_slider"></label>
+                <input id="pl_slider" type="range" min="0" max="10" value="0"></input>
+                <label id="pl_total_len" for="pl_slider"></label>
+             </div>
           </div>
        </div>
 
@@ -42,6 +46,12 @@
               // open connection
               console.log(location);
               var connection = new WebSocket('ws://'+location.hostname+':1337');
+
+              var pl_slider = document.getElementById("pl_slider");
+              pl_slider.onchange = function()
+              {
+                 connection.send(JSON.stringify({ type:'Change-Position', item: cur_item, pos: pl_slider.value }));
+              }
 
               // most important part - incoming messages
               connection.onmessage = function (message) {
@@ -86,7 +96,24 @@
                        cur_item = json.item;
                        document.getElementById("pl_icon").src = json.icon;
                     }
-                    document.getElementById("pl_pos").innerHTML = json.pos + " / " + json.len;
+                    if (json.len != cur_item_len)
+                    {
+                       var date = new Date;
+                       date.setTime(0);
+                       date.setSeconds(json.len);
+                       document.getElementById("pl_total_len").innerHTML = date.toISOString().substr(11, 8);;
+                       pl_slider.max = json.len;
+                       cur_item_len = json.len;
+                    }
+                    if (json.pos != cur_item_pos)
+                    {
+                       var date = new Date;
+                       date.setTime(0);
+                       date.setSeconds(json.pos);
+                       document.getElementById("pl_pos").innerHTML = date.toISOString().substr(11, 8);;
+                       pl_slider.value = json.pos;
+                       cur_item_pos = json.pos;
+                    }
                  }
                  else {
                     console.log('Hmm..., I\'ve never seen JSON like this: ', json);
