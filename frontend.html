@@ -4,6 +4,15 @@
         <meta charset="utf-8">
         <title>muZic</title>
 
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <link rel="stylesheet"
+              type="text/css"
+              href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css">
+        <script type='text/javascript'
+                src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+        <link rel="stylesheet"
+              type="text/css"
+              href="http://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css">
         <style>
             .selectors_box {
                background: #eaeaed;
@@ -28,10 +37,23 @@
                 <input id="pl_slider" type="range" min="0" max="10" value="0"></input>
                 <label id="pl_total_len" for="pl_slider"></label>
              </div>
+             <div>
+                <button id="pl_prev_bt" type="button" class="btn btn-default btn-xs">
+                   <span class="glyphicon glyphicon-fast-backward"></span>
+                </button>
+                <button id="pl_play_bt" type="button" class="btn btn-default btn-xs">
+                   <span class="glyphicon glyphicon-pause"></span>
+                </button>
+                <button id="pl_stop_bt" type="button" class="btn btn-default btn-xs">
+                   <span class="glyphicon glyphicon-stop"></span>
+                </button>
+                <button id="pl_next_bt" type="button" class="btn btn-default btn-xs">
+                   <span class="glyphicon glyphicon-fast-forward"></span>
+                </button>
+             </div>
           </div>
        </div>
 
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
         <script>
            $(function () {
               "use strict";
@@ -46,6 +68,18 @@
               // open connection
               console.log(location);
               var connection = new WebSocket('ws://'+location.hostname+':1337');
+
+              var pl_play_bt = document.getElementById("pl_play_bt");
+              pl_play_bt.onclick = function()
+              {
+                 connection.send(JSON.stringify({ type:'PlayPause' }));
+              }
+
+              var pl_stop_bt = document.getElementById("pl_stop_bt");
+              pl_stop_bt.onclick = function()
+              {
+                 connection.send(JSON.stringify({ type:'Stop' }));
+              }
 
               var pl_slider = document.getElementById("pl_slider");
               pl_slider.onchange = function()
@@ -95,6 +129,14 @@
                     {
                        cur_item = json.item;
                        document.getElementById("pl_icon").src = json.icon;
+                    }
+                    if (json.state == "PLAY")
+                    {
+                       pl_play_bt.innerHTML = '<span class="glyphicon glyphicon-pause"></span>';
+                    }
+                    else
+                    {
+                       pl_play_bt.innerHTML = '<span class="glyphicon glyphicon-play"></span>';
                     }
                     if (json.len != cur_item_len)
                     {

@@ -22,8 +22,10 @@ var cur_pl_items = {};
 var yt_items = {};
 // Current item
 var cur_item = "";
+
 var cur_pos = 0;
 var cur_len = 0;
+var cur_state = "PAUSE";
 
 // Config data
 var config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '/.config/muZic/config.json'), 'utf8'));
@@ -36,10 +38,21 @@ zplay.stdin.write("SHOW_PROGRESS\n");
 
 function progress_send()
 {
-   clients.forEach(function(c)
-      {
-         c.sendUTF(JSON.stringify({ type:'Player-Progress', item: cur_item, icon: cur_pl_items[cur_item].icon, pos: cur_pos, len: cur_len }));
-      })
+   if (cur_item)
+   {
+      clients.forEach(function(c)
+         {
+            c.sendUTF(JSON.stringify(
+               {
+                  type:'Player-Progress',
+                  item: cur_item,
+                  icon: cur_pl_items[cur_item].icon,
+                  state: cur_state,
+                  pos: cur_pos,
+                  len: cur_len
+               }));
+         })
+   }
 }
 
 zplay.stdout.on('data', function(data) {
@@ -131,6 +144,7 @@ function song_download(item)
                      {
                         zplay.stdin.write("FILE "+path+'\n');
                         zplay.stdin.write("PLAY\n");
+                        cur_state = 'PLAY';
                      }
                   }
 
@@ -222,6 +236,27 @@ wsServer.on('request', function(request) {
          {
             cur_pos = json.pos;
             zplay.stdin.write("POSITION " + cur_pos + "\n");
+            progress_send();
+         }
+         else if (json.type == 'PlayPause')
+         {
+            if (cur_state == 'PLAY')
+            {
+               cur_state = 'PAUSE';
+               zplay.stdin.write("PAUSE\n");
+            }
+            else
+            {
+               cur_state = 'PLAY';
+               zplay.stdin.write("PLAY\n");
+            }
+            progress_send();
+         }
+         else if (json.type == 'Stop')
+         {
+            cur_state = 'PAUSE';
+            zplay.stdin.write("STOP\n");
+            cur_pos = "0";
             progress_send();
          }
       }
