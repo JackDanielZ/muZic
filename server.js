@@ -71,6 +71,12 @@ zplay.stdout.on('data', function(data) {
             progress_send();
          }
       }
+      else if (/STOPPED/g.test(lines[i]))
+      {
+         cur_state = 'PAUSE';
+         cur_pos = cur_len;
+         progress_send();
+      }
    }
 });
 
@@ -248,6 +254,8 @@ wsServer.on('request', function(request) {
             else
             {
                cur_state = 'PLAY';
+               if (cur_pos == cur_len)
+                  zplay.stdin.write("POSITION 0\n");
                zplay.stdin.write("PLAY\n");
             }
             progress_send();
