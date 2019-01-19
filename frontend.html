@@ -58,6 +58,7 @@
            $(function () {
               "use strict";
 
+              var cur_list = "";
               var cur_item = "";
               var cur_item_pos = 0;
               var cur_item_len = 0;
@@ -103,6 +104,7 @@
                  if (json.type === 'List-Playlists') {
                     /* List playlists */
                     var html = "";
+                    if (cur_list == "") html = "<option>---</option>";
                     for (var item of json.data)
                        html = html + '<option value="' + item.name + '">' + item.name + '</option>';
                     document.getElementById("pls_content").innerHTML = html;
@@ -115,9 +117,9 @@
                  else if (json.type === 'List-Items') {
                     /* List items */
                     var html = "";
+                    if (cur_item == "") html = "<option>---</option>";
                     for (var item in json.data)
                        html = html + '<option data-icon="'+json.data[item.icon]+'" value="' + item + '">' + json.data[item].title + '</option>';
-                    if (html == "") html = "<option>None</option>";
                     document.getElementById("items_content").innerHTML = html;
                     document.getElementById("items_content").onchange = function()
                     {
@@ -125,10 +127,15 @@
                     }
                  }
                  else if (json.type === 'Player-Progress') {
+                    if (json.list != cur_list)
+                    {
+                       cur_list = json.list;
+                       document.getElementById("pls_content").value = cur_list;
+                    }
                     if (json.item != cur_item)
                     {
                        cur_item = json.item;
-                       document.getElementById("pl_icon").src = json.icon;
+                       document.getElementById("items_content").value = cur_item;
                     }
                     if (json.state == "PLAY")
                     {
@@ -153,6 +160,8 @@
                        date.setTime(0);
                        date.setSeconds(json.pos);
                        document.getElementById("pl_pos").innerHTML = date.toISOString().substr(11, 8);;
+                       if (document.getElementById("pl_icon").src != json.icon)
+                          document.getElementById("pl_icon").src = json.icon;
                        pl_slider.value = json.pos;
                        cur_item_pos = json.pos;
                     }

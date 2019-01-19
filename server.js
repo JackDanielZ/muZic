@@ -16,6 +16,8 @@ var child_process = require('child_process');
 
 // Array of currently connected clients
 var clients = [ ];
+// Current list
+var cur_list = "";
 // JSON list of the current playlist items
 var cur_pl_items = {};
 // JSON list of the youtube items infos
@@ -45,6 +47,7 @@ function progress_send()
             c.sendUTF(JSON.stringify(
                {
                   type:'Player-Progress',
+                  list: cur_list,
                   item: cur_item,
                   icon: cur_pl_items[cur_item].icon,
                   state: cur_state,
@@ -121,7 +124,7 @@ var wsServer = new webSocketServer({
    httpServer: server
 });
 
-function song_download(item)
+function song_download(item, to_play)
 {
    var found = false;
    for (let yt_item in yt_items)
@@ -146,8 +149,9 @@ function song_download(item)
                   if (progress[1] > 10.0)
                   {
                      yt_items[item].is_playable = true;
-                     if (item == cur_item)
+                     if (to_play)
                      {
+                        cur_item = item;
                         zplay.stdin.write("FILE "+path+'\n');
                         zplay.stdin.write("PLAY\n");
                         cur_state = 'PLAY';
@@ -182,8 +186,7 @@ wsServer.on('request', function(request) {
       pls_json.push({ name: pl, type: config.Playlists[pl].type });
    connection.sendUTF(JSON.stringify({ type:'List-Playlists', data: pls_json }));
    connection.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
-
-   console.log((new Date()) + ' Connection accepted.');
+   progress_send();
 
    // user sent some message
    connection.on('message', function(message) {
@@ -192,9 +195,15 @@ wsServer.on('request', function(request) {
          var json = JSON.parse(message.utf8Data);
          if (json.type == 'Select-Playlist')
          {
-            console.log('Select playlist: ' + json.data);
-            var url="https://www.youtube.com/watch?v="+config.Playlists[json.data].first_id+"&list="+config.Playlists[json.data].id;
+            cur_list = json.data;
+            cur_item = "";
+            cur_pos = 0;
+            cur_len = 0;
+            cur_state = "PAUSE";
+            console.log('Select playlist: ' + cur_list);
+            var url="https://www.youtube.com/watch?v="+config.Playlists[cur_list].first_id+"&list="+config.Playlists[cur_list].id;
             console.log(url);
+            progress_send();
             https.get(url, function(resp)
                {
                   var rl = readline.createInterface({
@@ -227,13 +236,16 @@ wsServer.on('request', function(request) {
          }
          else if (json.type == 'Select-Item')
          {
+            cur_pos = 0;
+            cur_len = 0;
+            cur_state = "PAUSE";
+            progress_send();
             console.log('Select item: ' + json.data);
             for (let item in cur_pl_items)
             {
                if (item == json.data)
                {
-                  cur_item = json.data;
-                  song_download(item);
+                  song_download(item, true);
                   break;
                }
             }
