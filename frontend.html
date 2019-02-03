@@ -82,6 +82,18 @@
                  connection.send(JSON.stringify({ type:'Stop' }));
               }
 
+              var pl_next_bt = document.getElementById("pl_next_bt");
+              pl_next_bt.onclick = function()
+              {
+                 connection.send(JSON.stringify({ type:'Next' }));
+              }
+
+              var pl_prev_bt = document.getElementById("pl_prev_bt");
+              pl_prev_bt.onclick = function()
+              {
+                 connection.send(JSON.stringify({ type:'Prev' }));
+              }
+
               var pl_slider = document.getElementById("pl_slider");
               pl_slider.onchange = function()
               {

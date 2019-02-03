@@ -37,6 +37,7 @@ process.title = 'muZic';
 var zplay = child_process.spawn("stdbuf", ["-oL", "-eL", 'zplay']);
 
 zplay.stdin.write("SHOW_PROGRESS\n");
+zplay.stdin.write("PAUSE_ON_NOTFOUND\n");
 
 function progress_send()
 {
@@ -79,6 +80,13 @@ zplay.stdout.on('data', function(data) {
          cur_state = 'PAUSE';
          cur_pos = cur_len;
          progress_send();
+      }
+      else if (/FILE_NOT_FOUND:/g.test(lines[i]))
+      {
+         var item = lines[i].substring(16);
+         console.log(yt_items[item]);
+         if (item.is_playable) song_play(item);
+         else song_download(item, true);
       }
    }
 });
@@ -124,20 +132,34 @@ var wsServer = new webSocketServer({
    httpServer: server
 });
 
+function song_queue(item)
+{
+   if (!yt_items[item])
+   {
+      yt_items[item] = ({
+         path: '/tmp/yt-'+item+'.opus',
+         downloading: false,
+         is_playable: false
+      });
+   }
+   zplay.stdin.write("ADD_TO_QUEUE " + item + " " + yt_items[item].path + '\n');
+}
+
+function song_play(item)
+{
+   cur_item = item;
+   zplay.stdin.write("PLAY "+item+'\n');
+   cur_state = 'PLAY';
+}
+
 function song_download(item, to_play)
 {
-   var found = false;
-   for (let yt_item in yt_items)
+   if (yt_items[item])
    {
-      if (yt_item == item) found = true;
-   }
-   if (!found)
-   {
-      var path = '/tmp/yt-'+item+'.opus';
       const child = child_process.spawn('youtube-dl',
          ['--audio-format','opus', '--no-part', '-x', 'http://youtube.com/watch?v='+item,
-            '-o', path]);
-      yt_items[item] = ({path: path, downloading: true, is_playable: false});
+            '-o', yt_items[item].path]);
+      yt_items[item].downloading = true;
       child.stdout.on('data', function(data)
          {
             console.log("ZZZ11"+data+"ZZZ12");
@@ -149,15 +171,8 @@ function song_download(item, to_play)
                   if (progress[1] > 10.0)
                   {
                      yt_items[item].is_playable = true;
-                     if (to_play)
-                     {
-                        cur_item = item;
-                        zplay.stdin.write("FILE "+path+'\n');
-                        zplay.stdin.write("PLAY\n");
-                        cur_state = 'PLAY';
-                     }
+                     if (to_play) song_play(item);
                   }
-
                }
             }
          })
@@ -220,6 +235,7 @@ wsServer.on('request', function(request) {
                         var title = line.match(/data-video-title="([^\"]+)"/);
                         var icon = line.match(/data-thumbnail-url="([^\"]+)"/);
                         cur_pl_items[id[1]] = {title: title[1], icon: icon[1]};
+                        song_queue(id[1]);
                      }
                   })
                   rl.on('close', function()
@@ -241,14 +257,7 @@ wsServer.on('request', function(request) {
             cur_state = "PAUSE";
             progress_send();
             console.log('Select item: ' + json.data);
-            for (let item in cur_pl_items)
-            {
-               if (item == json.data)
-               {
-                  song_download(item, true);
-                  break;
-               }
-            }
+            song_play(json.data);
          }
          else if (json.type == 'Change-Position')
          {
@@ -276,6 +285,20 @@ wsServer.on('request', function(request) {
          {
             cur_state = 'PAUSE';
             zplay.stdin.write("STOP\n");
+            cur_pos = "0";
+            progress_send();
+         }
+         else if (json.type == 'Next')
+         {
+            cur_state = 'PLAY';
+            zplay.stdin.write("NEXT\n");
+            cur_pos = "0";
+            progress_send();
+         }
+         else if (json.type == 'Prev')
+         {
+            cur_state = 'PLAY';
+            zplay.stdin.write("PREV\n");
             cur_pos = "0";
             progress_send();
          }
