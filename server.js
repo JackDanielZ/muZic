@@ -30,7 +30,7 @@ var cur_len = 0;
 var cur_state = "PAUSE";
 
 // Config data
-var config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '/.config/muZic/config.json'), 'utf8'));
+var config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '/.muZic/config.json'), 'utf8'));
 
 process.title = 'muZic';
 
@@ -137,7 +137,7 @@ function song_queue(item)
    if (!yt_items[item])
    {
       yt_items[item] = ({
-         path: '/tmp/yt-'+item+'.opus',
+         path: path.join(os.homedir(), '/.muZic/cache/yt-'+item+'.opus'),
          downloading: false,
          is_playable: false
       });
