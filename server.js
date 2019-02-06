@@ -88,6 +88,10 @@ zplay.stdout.on('data', function(data) {
          if (item.is_playable) song_play(item);
          else song_download(item, true);
       }
+      else if (/PLAYING:/g.test(lines[i]))
+      {
+         cur_item = lines[i].substring(9);
+      }
    }
 });
 
