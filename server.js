@@ -306,6 +306,13 @@ wsServer.on('request', function(request) {
             cur_pos = "0";
             progress_send();
          }
+         else if (json.type == 'Loop')
+         {
+            if (json.state == true)
+               zplay.stdin.write("LOOP ON\n");
+            else
+               zplay.stdin.write("LOOP OFF\n");
+         }
       }
    });
 

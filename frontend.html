@@ -50,6 +50,7 @@
                 <button id="pl_next_bt" type="button" class="btn btn-default btn-xs">
                    <span class="glyphicon glyphicon-fast-forward"></span>
                 </button>
+                <input id="loop_ck" type="checkbox"> Loop<br>
              </div>
           </div>
        </div>
@@ -98,6 +99,15 @@
               pl_slider.onchange = function()
               {
                  connection.send(JSON.stringify({ type:'Change-Position', item: cur_item, pos: pl_slider.value }));
+              }
+
+              var loop_ck = document.getElementById("loop_ck");
+              loop_ck.onclick = function()
+              {
+                 if (loop_ck.checked)
+                    connection.send(JSON.stringify({ type:'Loop', state: true }));
+                 else
+                    connection.send(JSON.stringify({ type:'Loop', state: false }));
               }
 
               // most important part - incoming messages
