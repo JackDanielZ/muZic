@@ -31,6 +31,7 @@ var cur_state = "PAUSE";
 
 // Config data
 var config = JSON.parse(fs.readFileSync(path.join(os.homedir(), '/.muZic/config.json'), 'utf8'));
+if (config.Playlists == undefined) config.Playlists = {};
 
 process.title = 'muZic';
 
@@ -253,6 +254,22 @@ wsServer.on('request', function(request) {
                }).on("error", (err) => {
                   console.log("Error: " + err.message);
                });
+         }
+         else if (json.type == 'Add-Playlist')
+         {
+            if (/youtube.com/g.test(json.url))
+            {
+               var first_id = json.url.match(/v=([a-zA-Z0-9_-]+)/);
+               var id = json.url.match(/list=([a-zA-Z0-9_-]+)/);
+               config.Playlists[json.name] = { type: "youtube", first_id: first_id[1], id: id[1] };
+               pls_json.push({ name: json.name, type: config.Playlists[json.name].type });
+               fs.writeFileSync(path.join(os.homedir(), '/.muZic/config.json'),
+                  JSON.stringify(config, null, 2));
+            }
+            clients.forEach(function(c)
+               {
+                  c.sendUTF(JSON.stringify({ type:'List-Playlists', data: pls_json }));
+               })
          }
          else if (json.type == 'Select-Item')
          {

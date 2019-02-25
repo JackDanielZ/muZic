@@ -14,6 +14,11 @@
               type="text/css"
               href="http://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css">
         <style>
+            .new_list_box {
+               background: #dddddd;
+               text-align: center;
+               style="border-style:solid; border-color:blue; border-width:3px;";
+            }
             .selectors_box {
                background: #eaeaed;
                text-align: center;
@@ -26,6 +31,11 @@
     </head>
     <body>
        <div>
+          <div class="new_list_box">
+             New playlist: Name <input type="text" id="new_list_name_input"></input>
+             URL <input type="text" size=60 id="new_list_url_input"></input>
+             <button id="new_pl_add_bt" type="button">Add</button>
+          </div>
           <div class="selectors_box">
              <select id="pls_content"></select>
              <select id="items_content"></select>
@@ -70,6 +80,23 @@
               // open connection
               console.log(location);
               var connection = new WebSocket('ws://'+location.hostname+':1337');
+
+              var new_pl_add_bt = document.getElementById("new_pl_add_bt");
+              new_pl_add_bt.onclick = function()
+              {
+                 var new_list_name_input = document.getElementById("new_list_name_input");
+                 var new_list_url_input = document.getElementById("new_list_url_input");
+                 if (new_list_name_input.value != "" && new_list_url_input.value != "")
+                 {
+                    connection.send(JSON.stringify({
+                       type:'Add-Playlist',
+                       name: new_list_name_input.value,
+                       url: new_list_url_input.value
+                    }));
+                    new_list_name_input.value = "";
+                    new_list_url_input.value = "";
+                 }
+              }
 
               var pl_play_bt = document.getElementById("pl_play_bt");
               pl_play_bt.onclick = function()
