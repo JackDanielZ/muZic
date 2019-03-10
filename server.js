@@ -20,8 +20,8 @@ var clients = [ ];
 var cur_list = "";
 // JSON list of the current playlist items
 var cur_pl_items = {};
-// JSON list of the youtube items infos
-var yt_items = {};
+// JSON list of the items infos
+var items = {};
 // Current item
 var cur_item = "";
 
@@ -85,7 +85,7 @@ zplay.stdout.on('data', function(data) {
       else if (/FILE_NOT_FOUND:/g.test(lines[i]))
       {
          var item = lines[i].substring(16);
-         console.log(yt_items[item]);
+         console.log(items[item]);
          if (item.is_playable) song_play(item);
          else song_download(item, true);
       }
@@ -139,15 +139,15 @@ var wsServer = new webSocketServer({
 
 function song_queue(item)
 {
-   if (!yt_items[item])
+   if (!items[item])
    {
-      yt_items[item] = ({
+      items[item] = ({
          path: path.join(os.homedir(), '/.muZic/cache/yt-'+item+'.opus'),
          downloading: false,
          is_playable: false
       });
    }
-   zplay.stdin.write("ADD_TO_QUEUE " + item + " " + yt_items[item].path + '\n');
+   zplay.stdin.write("ADD_TO_QUEUE " + item + " " + items[item].path + '\n');
 }
 
 function song_play(item)
@@ -159,23 +159,23 @@ function song_play(item)
 
 function song_download(item, to_play)
 {
-   if (yt_items[item])
+   if (items[item])
    {
       const child = child_process.spawn('youtube-dl',
          ['--audio-format','opus', '--no-part', '-x', 'http://youtube.com/watch?v='+item,
-            '-o', yt_items[item].path]);
-      yt_items[item].downloading = true;
+            '-o', items[item].path]);
+      items[item].downloading = true;
       child.stdout.on('data', function(data)
          {
             console.log("ZZZ11"+data+"ZZZ12");
-            if (!yt_items[item].is_playable)
+            if (!items[item].is_playable)
             {
                var progress = data.toString().match(/download. ([^%]+)% of/);
                if (progress)
                {
                   if (progress[1] > 10.0)
                   {
-                     yt_items[item].is_playable = true;
+                     items[item].is_playable = true;
                      if (to_play) song_play(item);
                   }
                }
@@ -187,8 +187,8 @@ function song_download(item, to_play)
          })
       child.on('close', function()
          {
-            yt_items[item].downloading = false;
-            console.log(yt_items[item]);
+            items[item].downloading = false;
+            console.log(items[item]);
          })
    }
 }
