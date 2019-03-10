@@ -137,14 +137,25 @@ var wsServer = new webSocketServer({
    httpServer: server
 });
 
-function song_queue(item)
+function song_queue(item, pl_type)
 {
+   var song_path = "";
+   var is_playable = false;
+   if (pl_type == "youtube")
+   {
+      song_path = path.join(os.homedir(), '/.muZic/cache/yt-'+item+'.opus');
+   }
+   else if (pl_type == "local")
+   {
+      song_path = path.join(os.homedir(), '/.muZic/cache/'+item+'.opus'),
+      is_playable = true;
+   }
    if (!items[item])
    {
       items[item] = ({
-         path: path.join(os.homedir(), '/.muZic/cache/yt-'+item+'.opus'),
+         path: song_path,
          downloading: false,
-         is_playable: false
+         is_playable: is_playable
       });
    }
    zplay.stdin.write("ADD_TO_QUEUE " + item + " " + items[item].path + '\n');
@@ -215,45 +226,65 @@ wsServer.on('request', function(request) {
          var json = JSON.parse(message.utf8Data);
          if (json.type == 'Select-Playlist')
          {
+            var type = config.Playlists[json.data].type;
             cur_list = json.data;
             cur_item = "";
             cur_pos = 0;
             cur_len = 0;
             cur_state = "PAUSE";
             console.log('Select playlist: ' + cur_list);
-            var url="https://www.youtube.com/watch?v="+config.Playlists[cur_list].first_id+"&list="+config.Playlists[cur_list].id;
-            console.log(url);
-            progress_send();
-            https.get(url, function(resp)
-               {
-                  var rl = readline.createInterface({
-                     input: resp,
-                     output: process.stdout,
-                     terminal: false
-                  });
-
-                  cur_pl_items = {};
-                  rl.on('line', function(line){
-                     if (/data-video-id=/g.test(line))
-                     {
-                        var id = line.match(/data-video-id="([^\"]+)"/);
-                        var title = line.match(/data-video-title="([^\"]+)"/);
-                        var icon = line.match(/data-thumbnail-url="([^\"]+)"/);
-                        cur_pl_items[id[1]] = {title: title[1], icon: icon[1]};
-                        song_queue(id[1]);
-                     }
-                  })
-                  rl.on('close', function()
+            console.log(pl);
+            console.log("  Type: "+type);
+            cur_pl_items = {};
+            if (type == "youtube")
+            {
+               var url="https://www.youtube.com/watch?v="+config.Playlists[cur_list].first_id+"&list="+config.Playlists[cur_list].id;
+               console.log(url);
+               progress_send();
+               https.get(url, function(resp)
                   {
-                     clients.forEach(function(c)
-                        {
-                           c.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
-                        })
-                  })
+                     var rl = readline.createInterface({
+                        input: resp,
+                        output: process.stdout,
+                        terminal: false
+                     });
 
-               }).on("error", (err) => {
-                  console.log("Error: " + err.message);
-               });
+                     rl.on('line', function(line){
+                        if (/data-video-id=/g.test(line))
+                        {
+                           var id = line.match(/data-video-id="([^\"]+)"/);
+                           var title = line.match(/data-video-title="([^\"]+)"/);
+                           var icon = line.match(/data-thumbnail-url="([^\"]+)"/);
+                           cur_pl_items[id[1]] = {title: title[1], icon: icon[1]};
+                           song_queue(id[1], type);
+                        }
+                     })
+                     rl.on('close', function()
+                        {
+                           clients.forEach(function(c)
+                              {
+                                 c.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
+                              })
+                        })
+
+                  }).on("error", (err) => {
+                     console.log("Error: " + err.message);
+                  });
+            }
+            else if (type == "local")
+            {
+               var pl_items = config.Playlists[json.data].items;
+               for (var item in pl_items)
+               {
+                  cur_pl_items[item] = {title: pl_items[item].title, icon: pl_items[item].icon};
+                  song_queue(item, type);
+               }
+               console.log(cur_pl_items);
+               clients.forEach(function(c)
+                  {
+                     c.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
+                  })
+            }
          }
          else if (json.type == 'Add-Playlist')
          {
