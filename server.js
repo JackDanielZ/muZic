@@ -48,7 +48,7 @@ function progress_send()
          {
             c.sendUTF(JSON.stringify(
                {
-                  type:'Player-Progress',
+                  opcode:'Player-Progress',
                   list: cur_list,
                   item: cur_item,
                   icon: cur_pl_items[cur_item].icon,
@@ -215,8 +215,8 @@ wsServer.on('request', function(request) {
    clients.push(connection);
    for (var pl in config.Playlists)
       pls_json.push({ name: pl, type: config.Playlists[pl].type });
-   connection.sendUTF(JSON.stringify({ type:'List-Playlists', data: pls_json }));
-   connection.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
+   connection.sendUTF(JSON.stringify({ opcode:'List-Playlists', data: pls_json }));
+   connection.sendUTF(JSON.stringify({ opcode:'List-Items', data: cur_pl_items }));
    progress_send();
 
    // user sent some message
@@ -224,7 +224,7 @@ wsServer.on('request', function(request) {
       if (message.type === 'utf8')
       { // accept only text
          var json = JSON.parse(message.utf8Data);
-         if (json.type == 'Select-Playlist')
+         if (json.opcode == 'Select-Playlist')
          {
             var type = config.Playlists[json.data].type;
             cur_list = json.data;
@@ -263,7 +263,7 @@ wsServer.on('request', function(request) {
                         {
                            clients.forEach(function(c)
                               {
-                                 c.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
+                                 c.sendUTF(JSON.stringify({ opcode:'List-Items', data: cur_pl_items }));
                               })
                         })
 
@@ -282,13 +282,13 @@ wsServer.on('request', function(request) {
                console.log(cur_pl_items);
                clients.forEach(function(c)
                   {
-                     c.sendUTF(JSON.stringify({ type:'List-Items', data: cur_pl_items }));
+                     c.sendUTF(JSON.stringify({ opcode:'List-Items', data: cur_pl_items }));
                   })
             }
          }
-         else if (json.type == 'Add-Playlist')
+         else if (json.opcode == 'Add-Playlist')
          {
-            if (/youtube.com/g.test(json.url))
+            if (json.type == 'youtube' && /youtube.com/g.test(json.url))
             {
                var first_id = json.url.match(/v=([a-zA-Z0-9_-]+)/);
                var id = json.url.match(/list=([a-zA-Z0-9_-]+)/);
@@ -297,12 +297,19 @@ wsServer.on('request', function(request) {
                fs.writeFileSync(path.join(os.homedir(), '/.muZic/config.json'),
                   JSON.stringify(config, null, 2));
             }
+            else if (json.type == 'local')
+            {
+               config.Playlists[json.name] = { type: "local" };
+               pls_json.push({ name: json.name, type: config.Playlists[json.name].type });
+               fs.writeFileSync(path.join(os.homedir(), '/.muZic/config.json'),
+                  JSON.stringify(config, null, 2));
+            }
             clients.forEach(function(c)
                {
-                  c.sendUTF(JSON.stringify({ type:'List-Playlists', data: pls_json }));
+                  c.sendUTF(JSON.stringify({ opcode:'List-Playlists', data: pls_json }));
                })
          }
-         else if (json.type == 'Select-Item')
+         else if (json.opcode == 'Select-Item')
          {
             cur_pos = 0;
             cur_len = 0;
@@ -311,13 +318,13 @@ wsServer.on('request', function(request) {
             console.log('Select item: ' + json.data);
             song_play(json.data);
          }
-         else if (json.type == 'Change-Position')
+         else if (json.opcode == 'Change-Position')
          {
             cur_pos = json.pos;
             zplay.stdin.write("POSITION " + cur_pos + "\n");
             progress_send();
          }
-         else if (json.type == 'PlayPause')
+         else if (json.opcode == 'PlayPause')
          {
             if (cur_state == 'PLAY')
             {
@@ -333,28 +340,28 @@ wsServer.on('request', function(request) {
             }
             progress_send();
          }
-         else if (json.type == 'Stop')
+         else if (json.opcode == 'Stop')
          {
             cur_state = 'PAUSE';
             zplay.stdin.write("STOP\n");
             cur_pos = "0";
             progress_send();
          }
-         else if (json.type == 'Next')
+         else if (json.opcode == 'Next')
          {
             cur_state = 'PLAY';
             zplay.stdin.write("NEXT\n");
             cur_pos = "0";
             progress_send();
          }
-         else if (json.type == 'Prev')
+         else if (json.opcode == 'Prev')
          {
             cur_state = 'PLAY';
             zplay.stdin.write("PREV\n");
             cur_pos = "0";
             progress_send();
          }
-         else if (json.type == 'Loop')
+         else if (json.opcode == 'Loop')
          {
             if (json.state == true)
                zplay.stdin.write("LOOP ON\n");

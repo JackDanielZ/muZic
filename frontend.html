@@ -33,6 +33,10 @@
        <div>
           <div class="new_list_box">
              New playlist: Name <input type="text" id="new_list_name_input"></input>
+             Type <select id="pl_type_sel">
+                <option value="youtube">Youtube</option>
+                <option value="local">Local</option>
+             </select>
              URL <input type="text" size=60 id="new_list_url_input"></input>
              <button id="new_pl_add_bt" type="button">Add</button>
           </div>
@@ -81,60 +85,76 @@
               console.log(location);
               var connection = new WebSocket('ws://'+location.hostname+':1337');
 
+              var pl_type_sel = document.getElementById("pl_type_sel");
+              pl_type_sel.onchange = function()
+              {
+                 console.log(pl_type_sel.value);
+                 var new_list_url_input = document.getElementById("new_list_url_input");
+                 if (pl_type_sel.value != "local") {
+                    new_list_url_input.disabled = false;
+                 } else {
+                    new_list_url_input.disabled = true;
+                 }
+              }
+
               var new_pl_add_bt = document.getElementById("new_pl_add_bt");
               new_pl_add_bt.onclick = function()
               {
                  var new_list_name_input = document.getElementById("new_list_name_input");
                  var new_list_url_input = document.getElementById("new_list_url_input");
-                 if (new_list_name_input.value != "" && new_list_url_input.value != "")
+                 if (new_list_name_input.value != "")
                  {
-                    connection.send(JSON.stringify({
-                       type:'Add-Playlist',
-                       name: new_list_name_input.value,
-                       url: new_list_url_input.value
-                    }));
-                    new_list_name_input.value = "";
-                    new_list_url_input.value = "";
+                    if (pl_type_sel.value == "local" || new_list_url_input.value != "")
+                    {
+                       connection.send(JSON.stringify({
+                          opcode:'Add-Playlist',
+                          name: new_list_name_input.value,
+                          type: pl_type_sel.value,
+                          url: new_list_url_input.value
+                       }));
+                       new_list_name_input.value = "";
+                       new_list_url_input.value = "";
+                    }
                  }
               }
 
               var pl_play_bt = document.getElementById("pl_play_bt");
               pl_play_bt.onclick = function()
               {
-                 connection.send(JSON.stringify({ type:'PlayPause' }));
+                 connection.send(JSON.stringify({ opcode:'PlayPause' }));
               }
 
               var pl_stop_bt = document.getElementById("pl_stop_bt");
               pl_stop_bt.onclick = function()
               {
-                 connection.send(JSON.stringify({ type:'Stop' }));
+                 connection.send(JSON.stringify({ opcode:'Stop' }));
               }
 
               var pl_next_bt = document.getElementById("pl_next_bt");
               pl_next_bt.onclick = function()
               {
-                 connection.send(JSON.stringify({ type:'Next' }));
+                 connection.send(JSON.stringify({ opcode:'Next' }));
               }
 
               var pl_prev_bt = document.getElementById("pl_prev_bt");
               pl_prev_bt.onclick = function()
               {
-                 connection.send(JSON.stringify({ type:'Prev' }));
+                 connection.send(JSON.stringify({ opcode:'Prev' }));
               }
 
               var pl_slider = document.getElementById("pl_slider");
               pl_slider.onchange = function()
               {
-                 connection.send(JSON.stringify({ type:'Change-Position', item: cur_item, pos: pl_slider.value }));
+                 connection.send(JSON.stringify({ opcode:'Change-Position', item: cur_item, pos: pl_slider.value }));
               }
 
               var loop_ck = document.getElementById("loop_ck");
               loop_ck.onclick = function()
               {
                  if (loop_ck.checked)
-                    connection.send(JSON.stringify({ type:'Loop', state: true }));
+                    connection.send(JSON.stringify({ opcode:'Loop', state: true }));
                  else
-                    connection.send(JSON.stringify({ type:'Loop', state: false }));
+                    connection.send(JSON.stringify({ opcode:'Loop', state: false }));
               }
 
               // most important part - incoming messages
@@ -150,7 +170,7 @@
                     }
 
                  console.log(json);
-                 if (json.type === 'List-Playlists') {
+                 if (json.opcode === 'List-Playlists') {
                     /* List playlists */
                     var html = "";
                     if (cur_list == "") html = "<option>---</option>";
@@ -159,11 +179,11 @@
                     document.getElementById("pls_content").innerHTML = html;
                     document.getElementById("pls_content").onchange = function()
                     {
-                       console.log(JSON.stringify({ type:'Select-Playlist', data: this.value }));
-                       connection.send(JSON.stringify({ type:'Select-Playlist', data: this.value }));
+                       console.log(JSON.stringify({ opcode:'Select-Playlist', data: this.value }));
+                       connection.send(JSON.stringify({ opcode:'Select-Playlist', data: this.value }));
                     }
                  }
-                 else if (json.type === 'List-Items') {
+                 else if (json.opcode === 'List-Items') {
                     /* List items */
                     var html = "";
                     if (cur_item == "") html = "<option>---</option>";
@@ -172,10 +192,10 @@
                     document.getElementById("items_content").innerHTML = html;
                     document.getElementById("items_content").onchange = function()
                     {
-                       connection.send(JSON.stringify({ type:'Select-Item', data: this.value }));
+                       connection.send(JSON.stringify({ opcode:'Select-Item', data: this.value }));
                     }
                  }
-                 else if (json.type === 'Player-Progress') {
+                 else if (json.opcode === 'Player-Progress') {
                     if (json.list != cur_list)
                     {
                        cur_list = json.list;
