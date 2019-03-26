@@ -35,7 +35,8 @@ if (config.Playlists == undefined) config.Playlists = {};
 
 process.title = 'muZic';
 
-var zplay = child_process.spawn("stdbuf", ["-oL", "-eL", 'zplay']);
+var zplay = child_process.spawn("stdbuf", ["-oL", "-eL", 'zplay'],
+   { detached: true, stdio: ['pipe', 'pipe', process.stderr] });
 
 zplay.stdin.write("SHOW_PROGRESS\n");
 zplay.stdin.write("PAUSE_ON_NOTFOUND\n");
