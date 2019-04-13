@@ -310,6 +310,25 @@ wsServer.on('request', function(request) {
                   c.sendUTF(JSON.stringify({ opcode:'List-Playlists', data: pls_json }));
                })
          }
+         else if (json.opcode == 'Add-to-Local')
+         {
+            var pl_src = config.Playlists[json.playlist_src];
+            var pl_dest = config.Playlists[json.playlist_dest];
+            var item_info = cur_pl_items[json.item];
+            var item_name = json.item;
+            if (pl_src != undefined)
+            {
+               console.log(pl_src);
+               if (pl_src.type == "youtube")
+               {
+                  item_name = 'yt-' + item_name;
+               }
+               if (pl_dest.items == undefined) pl_dest.items = {};
+               pl_dest.items[item_name] = { icon: item_info.icon, title: item_info.title };
+               fs.writeFileSync(path.join(os.homedir(), '/.muZic/config.json'),
+                  JSON.stringify(config, null, 2));
+            }
+         }
          else if (json.opcode == 'Select-Item')
          {
             cur_pos = 0;

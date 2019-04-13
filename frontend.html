@@ -27,6 +27,48 @@
                background: #eaeaed;
                text-align: center;
             }
+            .dropdown {
+               position: relative;
+               display: inline-block;
+            }
+            .dropdown-content {
+               display: none;
+               position: absolute;
+               z-index: 1;
+            }
+            .dropdown:hover .dropdown-content {
+               display: block;
+            }
+            ul {
+               margin: 0;
+               padding: 0;
+            }
+            ul li {
+               display: block;
+               padding: 5px 0;
+               margin: 3px 0;
+               width: 100px;
+               text-align: center;
+               background-color: gray;
+               color: white;
+               position: relative;
+               cursor: pointer;
+            }
+            ul > li:first-child, ul li ul > li:first-child {
+               margin: 0;
+            }
+            ul li span {
+
+            }
+            ul li ul {
+               display: none;
+               position: absolute;
+            }
+            ul li:hover ul {
+               display: block;
+               left: 101px;
+               top: 0;
+            }
         </style>
     </head>
     <body>
@@ -65,6 +107,19 @@
                    <span class="glyphicon glyphicon-fast-forward"></span>
                 </button>
                 <input id="loop_ck" type="checkbox"> Loop<br>
+                <div class="dropdown">
+                   <span>...</span>
+                   <div class="dropdown-content">
+                      <ul id="options_menu">
+                         <li><span>Ban song</span></li>
+                         <li>
+                            <span>Add to local ...</span>
+                            <ul id="options_local_pls"></ul>
+                         </li>
+                         <li><span>Delete playlist</span></li>
+                      </ul>
+                   </div>
+                </div>
              </div>
           </div>
        </div>
@@ -84,6 +139,11 @@
               // open connection
               console.log(location);
               var connection = new WebSocket('ws://'+location.hostname+':1337');
+
+              var items_content = document.getElementById("items_content");
+
+              var options_menu = document.getElementById("options_menu");
+              var options_local_pls = document.getElementById("options_local_pls");
 
               var pl_type_sel = document.getElementById("pl_type_sel");
               pl_type_sel.onchange = function()
@@ -174,8 +234,30 @@
                     /* List playlists */
                     var html = "";
                     if (cur_list == "") html = "<option>---</option>";
+                    options_local_pls.innerHTML = "";
                     for (var item of json.data)
+                    {
+                       if (item.type == "local")
+                       {
+                          var li = document.createElement("li");
+                          li.appendChild(document.createTextNode(item.name));
+                          options_local_pls.appendChild(li);
+                          li.addEventListener("click", (evt) => {
+                             console.log(item.name);
+                             console.log(items_content.value);
+                             connection.send(
+                                JSON.stringify({
+                                   opcode:"Add-to-Local",
+                                   playlist_src: cur_list,
+                                   playlist_dest: item.name,
+                                   item: items_content.value
+                                }));
+                             options_menu.hidden = true;
+                          });
+                       }
+
                        html = html + '<option value="' + item.name + '">' + item.name + '</option>';
+                    }
                     document.getElementById("pls_content").innerHTML = html;
                     document.getElementById("pls_content").onchange = function()
                     {
@@ -189,8 +271,8 @@
                     if (cur_item == "") html = "<option>---</option>";
                     for (var item in json.data)
                        html = html + '<option data-icon="'+json.data[item.icon]+'" value="' + item + '">' + json.data[item].title + '</option>';
-                    document.getElementById("items_content").innerHTML = html;
-                    document.getElementById("items_content").onchange = function()
+                    items_content.innerHTML = html;
+                    items_content.onchange = function()
                     {
                        connection.send(JSON.stringify({ opcode:'Select-Item', data: this.value }));
                     }
@@ -204,7 +286,7 @@
                     if (json.item != cur_item)
                     {
                        cur_item = json.item;
-                       document.getElementById("items_content").value = cur_item;
+                       items_content.value = cur_item;
                     }
                     if (json.state == "PLAY")
                     {
