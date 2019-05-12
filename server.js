@@ -197,10 +197,17 @@ function song_download(item, to_play)
          {
             console.log("ZZZ21"+data+"ZZZ22");
          })
-      child.on('close', function()
+      child.on('exit', function(code)
          {
             items[item].downloading = false;
             console.log(items[item]);
+            if (code != 0)
+            {
+               cur_state = 'PLAY';
+               zplay.stdin.write("NEXT\n");
+               cur_pos = "0";
+               progress_send();
+            }
          })
    }
 }
